@@ -39,7 +39,7 @@ int main(int argc, char *argv[]) {
   double *v1;
   double *flat;
   double *chunk;
-  double *res;
+  double *res = new double[count];
   int chunk_size;
 
   double start_time = MPI_Wtime();
@@ -47,7 +47,6 @@ int main(int argc, char *argv[]) {
   if (rank == 0) {
     int min_chunk_size = count / size + 1;
     v1 = new double[count];
-    res = new double[count];
     for (int i = 0; i < count; i++) {
       v1[i] = 0;
     }
@@ -153,6 +152,10 @@ int main(int argc, char *argv[]) {
 
   double end_time = MPI_Wtime();
   if (rank == 0) {
+    for (int i = 0; i < count; i++) {
+      cout << res[i] << " ";
+    }
+    cout << endl;
     cout << size << " " << count << endl;
     cout << end_time - start_time << endl;
   }
