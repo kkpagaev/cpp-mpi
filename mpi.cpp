@@ -38,6 +38,8 @@ int main(int argc, char *argv[]) {
   int remain = count % size;
   double *v1;
   double *flat;
+  int *fixed;
+  int *fixed_static;
   double *chunk;
   double *res = new double[count];
   int chunk_size;
@@ -51,10 +53,14 @@ int main(int argc, char *argv[]) {
       v1[i] = 0;
     }
     v1[0] = 0;
-    v1[1] = 0;
-    v1[count - 3] = 100;
-    v1[count - 2] = 100;
+    // v1[1] = 1;
+    v1[count - 4] = 100;
     v1[count - 1] = 100;
+
+    fixed_static = new int[3];
+    fixed_static[0] = 1;
+    fixed_static[1] = count - 4;
+    fixed_static[2] = count - 1;
 
     chunk_size = min_chunk_size;
     if (remain > 0) {
@@ -64,8 +70,8 @@ int main(int argc, char *argv[]) {
     int first_end = 0 + chunk_size - 1;
     int prev_end = first_end;
 
-    cout << "remain" << remain << endl;
-    cout << "chunk_size " << chunk_size << " first_end " << first_end << endl;
+    // cout << "remain" << remain << endl;
+    // cout << "chunk_size " << chunk_size << " first_end " << first_end << endl;
 
     for (int i = 1; i < size; i++) {
       uint rsv_chunk_size = min_chunk_size + 1;
@@ -89,12 +95,12 @@ int main(int argc, char *argv[]) {
       prev_end = end;
       assert(end < count);
 
-      cout << "i " << i << " chunk_size " << chunk_size << " start " << start
-           << " end " << end << " " << v1[end] << " " << v1[start] << endl;
+      // cout << "i " << i << " chunk_size " << chunk_size << " start " << start
+      //      << " end " << end << " " << v1[end] << " " << v1[start] << endl;
       MPI_Send(&v1[start], rsv_chunk_size, MPI_DOUBLE, i, 0, MPI_COMM_WORLD);
     }
 
-    cout << "fet" ;
+    // cout << "fet" ;
     chunk = v1;
 
   } else {
@@ -107,11 +113,11 @@ int main(int argc, char *argv[]) {
     }
     chunk = new double[chunk_size];
     // if (rank == 1) {
-      cout << "size " << chunk_size << endl;
+      // cout << "size " << chunk_size << endl;
     // }
     MPI_Recv(chunk, chunk_size, MPI_DOUBLE, 0, 0, MPI_COMM_WORLD,
              MPI_STATUS_IGNORE);
-    cout << "foo";
+    // cout << "foo";
   }
 
   flat = new double[count];
@@ -119,7 +125,22 @@ int main(int argc, char *argv[]) {
     flat[i] = 0;
   }
 
+  double left_neighbor, right_neighbor;
+
   for (int n = 0; n < iterations; n++) {
+		if (rank > 0) {
+			MPI_Send(&chunk[0], 1, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD);
+			MPI_Recv(&left_neighbor, 1, MPI_DOUBLE, rank - 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+
+      chunk[0] = left_neighbor;
+		}
+		if (rank < size - 1) {
+      // std::cout << "c "<< chunk[chunk_size - 1] << std::endl;
+			MPI_Send(&chunk[chunk_size - 1], 1, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD);
+			MPI_Recv(&right_neighbor, 1, MPI_DOUBLE, rank + 1, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+      chunk[chunk_size - 1] = right_neighbor;
+		}
+
     vector_flater_mpi(chunk, flat, chunk_size);
     auto temp = &chunk;
     chunk = flat;
